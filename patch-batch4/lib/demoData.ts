@@ -1,0 +1,116 @@
+import type { Task, Habit, AccountabilityNudge } from "@/types";
+
+const now = () => new Date();
+const hoursFromNow = (h: number) => new Date(now().getTime() + h * 60 * 60 * 1000).toISOString();
+const daysAgo = (d: number) => new Date(now().getTime() - d * 24 * 60 * 60 * 1000).toISOString();
+
+export const DEMO_TASKS: Task[] = [
+  {
+    id: "demo-1",
+    userId: "demo",
+    title: "Database Systems assignment 3",
+    category: "assignment",
+    estimatedMinutes: 180,
+    remainingMinutes: 170,
+    deadline: hoursFromNow(6),
+    createdAt: daysAgo(3),
+    status: "pending",
+    riskScore: 91,
+    riskLevel: "critical",
+    riskReason: "Only 6 hours left and 170 of 180 minutes of work remain untouched.",
+    riskConfidence: 0.92,
+  },
+  {
+    id: "demo-2",
+    userId: "demo",
+    title: "OS midterm revision",
+    category: "exam",
+    estimatedMinutes: 300,
+    remainingMinutes: 240,
+    deadline: hoursFromNow(30),
+    createdAt: daysAgo(5),
+    status: "in_progress",
+    riskScore: 68,
+    riskLevel: "high",
+    riskReason: "Large remaining workload relative to time left, and prior exams were started late.",
+    riskConfidence: 0.81,
+  },
+  {
+    id: "demo-3",
+    userId: "demo",
+    title: "Pay hostel mess bill",
+    category: "bill",
+    estimatedMinutes: 10,
+    remainingMinutes: 10,
+    deadline: hoursFromNow(60),
+    createdAt: daysAgo(1),
+    status: "pending",
+    riskScore: 22,
+    riskLevel: "low",
+    riskReason: "Quick task with plenty of runway left.",
+    riskConfidence: 0.74,
+  },
+  {
+    id: "demo-4",
+    userId: "demo",
+    title: "Mock interview prep — Google for Developers",
+    category: "interview",
+    estimatedMinutes: 90,
+    remainingMinutes: 60,
+    deadline: hoursFromNow(96),
+    createdAt: daysAgo(2),
+    status: "in_progress",
+    riskScore: 41,
+    riskLevel: "medium",
+    riskReason: "Moderate workload, runway is comfortable for now.",
+    riskConfidence: 0.69,
+  },
+  {
+    id: "demo-5",
+    userId: "demo",
+    title: "Team standup — VIBE2SHIP hackathon",
+    category: "meeting",
+    estimatedMinutes: 30,
+    remainingMinutes: 30,
+    deadline: hoursFromNow(2),
+    createdAt: daysAgo(0),
+    status: "pending",
+    riskScore: 15,
+    riskLevel: "low",
+    riskReason: "Short, fixed-time commitment with no real risk of slipping.",
+    riskConfidence: 0.6,
+  },
+];
+
+export const DEMO_HABITS: Habit[] = [
+  {
+    id: "demo-habit-1",
+    userId: "demo",
+    title: "30 min DSA practice",
+    frequency: "daily",
+    createdAt: daysAgo(14),
+    currentStreak: 6,
+    longestStreak: 11,
+    lastCompletedAt: daysAgo(0),
+    completionLog: [],
+  },
+  {
+    id: "demo-habit-2",
+    userId: "demo",
+    title: "Morning planning review",
+    frequency: "weekdays",
+    createdAt: daysAgo(20),
+    currentStreak: 3,
+    longestStreak: 9,
+    lastCompletedAt: daysAgo(1),
+    completionLog: [],
+  },
+];
+
+export const DEMO_NUDGE: AccountabilityNudge = {
+  generatedAt: now().toISOString(),
+  tone: "firm",
+  message:
+    "One task is at critical risk with 6 hours left, and your DSA streak is at 6 days — don't let the assignment break it.",
+  focusSuggestion: "Open the Database Systems assignment right now and finish just the first query.",
+};

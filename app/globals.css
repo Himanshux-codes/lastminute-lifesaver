@@ -1,0 +1,89 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-display: "Space Grotesk", "Segoe UI", sans-serif;
+  --font-body: "Inter", "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+
+  /* Dark theme (default) — values are "R G B" so Tailwind's <alpha-value> opacity
+     modifiers (e.g. bg-base-800/60) keep working exactly as before. */
+  --color-base-950: 5 7 15;
+  --color-base-900: 10 14 26;
+  --color-base-800: 16 23 41;
+  --color-base-700: 26 34 56;
+  --color-ink: 231 233 245;
+  --color-ink-muted: 142 148 176;
+  --color-ink-faint: 90 96 128;
+}
+
+html.light {
+  --color-base-950: 247 248 252;
+  --color-base-900: 255 255 255;
+  --color-base-800: 237 239 247;
+  --color-base-700: 222 225 238;
+  --color-ink: 18 22 38;
+  --color-ink-muted: 90 96 128;
+  --color-ink-faint: 138 144 168;
+}
+
+html {
+  color-scheme: dark;
+}
+
+html.light {
+  color-scheme: light;
+}
+
+body {
+  background-color: rgb(var(--color-base-950));
+  color: rgb(var(--color-ink));
+  font-family: var(--font-body);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  .grain {
+    background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 3px 3px;
+  }
+  .skip-link {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    z-index: 100;
+  }
+  .skip-link:focus {
+    left: 1rem;
+    top: 1rem;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    background: #6e63ff;
+    color: white;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+:focus-visible {
+  outline: 2px solid #9b93ff;
+  outline-offset: 2px;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
