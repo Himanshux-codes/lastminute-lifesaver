@@ -39,6 +39,7 @@ const config: Config = {
         card: "0 1px 2px rgba(0, 0, 0, 0.24), 0 12px 32px -16px rgba(0, 0, 0, 0.45)",
         elevated: "0 2px 4px rgba(0, 0, 0, 0.28), 0 24px 48px -20px rgba(0, 0, 0, 0.55)",
         "glow-sm": "0 0 0 1px rgba(110, 99, 255, 0.25), 0 8px 20px -8px rgba(110, 99, 255, 0.35)",
+        glass: "0 1px 1px rgba(255, 255, 255, 0.06) inset, 0 16px 40px -16px rgba(0, 0, 0, 0.5)",
       },
       keyframes: {
         pulseRing: {
@@ -50,10 +51,21 @@ const config: Config = {
           "0%": { opacity: "0", transform: "translateY(8px)" },
           "100%": { opacity: "1", transform: "translateY(0)" },
         },
+        floatSlow: {
+          "0%, 100%": { transform: "translateY(0px) rotate(var(--float-rot, 0deg))" },
+          "50%": { transform: "translateY(-12px) rotate(var(--float-rot, 0deg))" },
+        },
+        auroraShift: {
+          "0%, 100%": { transform: "translate(0%, 0%) scale(1)" },
+          "33%": { transform: "translate(4%, -6%) scale(1.08)" },
+          "66%": { transform: "translate(-4%, 4%) scale(0.96)" },
+        },
       },
       animation: {
         pulseRing: "pulseRing 2.2s cubic-bezier(0.4,0,0.6,1) infinite",
         fadeUp: "fadeUp 0.5s cubic-bezier(0.16,1,0.3,1) both",
+        floatSlow: "floatSlow 6s ease-in-out infinite",
+        aurora: "auroraShift 18s ease-in-out infinite",
       },
     },
   },

@@ -1,0 +1,169 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-display: "Space Grotesk", "Segoe UI", sans-serif;
+  --font-body: "Inter", "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+
+  /* Dark theme (default) — values are "R G B" so Tailwind's <alpha-value> opacity
+     modifiers (e.g. bg-base-800/60) keep working exactly as before. */
+  --color-base-950: 5 7 15;
+  --color-base-900: 10 14 26;
+  --color-base-800: 16 23 41;
+  --color-base-700: 26 34 56;
+  --color-ink: 231 233 245;
+  --color-ink-muted: 142 148 176;
+  --color-ink-faint: 90 96 128;
+}
+
+html.light {
+  --color-base-950: 247 248 252;
+  --color-base-900: 255 255 255;
+  --color-base-800: 237 239 247;
+  --color-base-700: 222 225 238;
+  --color-ink: 18 22 38;
+  --color-ink-muted: 90 96 128;
+  --color-ink-faint: 138 144 168;
+}
+
+html {
+  color-scheme: dark;
+}
+
+html.light {
+  color-scheme: light;
+}
+
+body {
+  background-color: rgb(var(--color-base-950));
+  color: rgb(var(--color-ink));
+  font-family: var(--font-body);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+h1,
+h2,
+h3,
+.font-display {
+  letter-spacing: -0.01em;
+}
+
+/* Thin, unobtrusive scrollbar — matches the rest of the dark, premium chrome instead of
+   the browser default, which looks jarring against this color system. */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgb(var(--color-base-700));
+  border-radius: 999px;
+  border: 2px solid rgb(var(--color-base-950));
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--color-ink-faint));
+}
+
+@layer components {
+  /* Shared card primitive so every panel across the app gets the same border, depth, and
+     hover lift without each page hand-rolling its own shadow/border combination. */
+  .card {
+    @apply rounded-2xl border border-white/[0.06] bg-base-800/60 shadow-card backdrop-blur-sm;
+  }
+  .card-interactive {
+    @apply card transition duration-200 hover:border-white/[0.1] hover:shadow-elevated;
+  }
+  /* True glassmorphism variant for surfaces that sit over the animated aurora background
+     (hero floating cards, sticky nav) — needs more transparency + blur than the standard
+     card so the gradient behind it stays visible. */
+  .glass {
+    @apply rounded-2xl border border-white/[0.08] bg-white/[0.04] shadow-glass backdrop-blur-xl;
+  }
+
+  /* Primary CTA: gradient fill + a soft diagonal shine that sweeps across on hover. The
+     shine is a pure-CSS pseudo-element animation, not JS, so it costs nothing at rest. */
+  .btn-primary {
+    @apply relative isolate inline-flex items-center justify-center gap-2 overflow-hidden rounded-full bg-gradient-to-b from-signal-glow to-signal px-6 py-3 text-sm font-medium text-white shadow-glow transition duration-200;
+  }
+  .btn-primary:hover:not(:disabled) {
+    @apply -translate-y-0.5 shadow-elevated;
+  }
+  .btn-primary:active:not(:disabled) {
+    @apply translate-y-0;
+  }
+  .btn-primary:disabled {
+    @apply cursor-not-allowed opacity-60;
+  }
+  .btn-primary::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, 0.35) 50%, transparent 60%);
+    transform: translateX(-120%);
+    transition: transform 0.7s ease;
+  }
+  .btn-primary:hover::after {
+    transform: translateX(120%);
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-5 py-2.5 text-sm font-medium text-ink-muted shadow-card transition duration-200 hover:-translate-y-0.5 hover:border-white/20 hover:text-ink hover:shadow-elevated active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .pill {
+    @apply inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.02] px-4 py-2 text-sm text-ink-muted shadow-card transition duration-200 hover:-translate-y-0.5 hover:border-white/20 hover:text-ink hover:shadow-elevated;
+  }
+
+  .stat-figure {
+    @apply font-display text-3xl font-semibold tracking-tight text-ink tabular-nums;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  .grain {
+    background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 3px 3px;
+  }
+  .skip-link {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    z-index: 100;
+  }
+  .skip-link:focus {
+    left: 1rem;
+    top: 1rem;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    background: #6e63ff;
+    color: white;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+:focus-visible {
+  outline: 2px solid #9b93ff;
+  outline-offset: 2px;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
