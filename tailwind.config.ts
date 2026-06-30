@@ -36,6 +36,9 @@ const config: Config = {
       },
       boxShadow: {
         glow: "0 0 40px -10px rgba(110, 99, 255, 0.45)",
+        card: "0 1px 2px rgba(0, 0, 0, 0.24), 0 12px 32px -16px rgba(0, 0, 0, 0.45)",
+        elevated: "0 2px 4px rgba(0, 0, 0, 0.28), 0 24px 48px -20px rgba(0, 0, 0, 0.55)",
+        "glow-sm": "0 0 0 1px rgba(110, 99, 255, 0.25), 0 8px 20px -8px rgba(110, 99, 255, 0.35)",
       },
       keyframes: {
         pulseRing: {
@@ -43,9 +46,14 @@ const config: Config = {
           "70%": { transform: "scale(1.4)", opacity: "0" },
           "100%": { transform: "scale(1.4)", opacity: "0" },
         },
+        fadeUp: {
+          "0%": { opacity: "0", transform: "translateY(8px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
       },
       animation: {
         pulseRing: "pulseRing 2.2s cubic-bezier(0.4,0,0.6,1) infinite",
+        fadeUp: "fadeUp 0.5s cubic-bezier(0.16,1,0.3,1) both",
       },
     },
   },

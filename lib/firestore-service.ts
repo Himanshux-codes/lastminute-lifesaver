@@ -64,14 +64,21 @@ export async function getBehavioralStats(userId: string): Promise<{
 }> {
   const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
 
+  // Intentionally only two filter fields here (userId equality + createdAt range), which
+  // Firestore can serve with its automatic indexes. Adding a third filter like
+  // .where("status", "in", [...]) turns this into an equality + range + "in" composite
+  // query, which Firestore does NOT auto-index — it throws FAILED_PRECONDITION at runtime
+  // on any project that hasn't had that exact composite index manually deployed. Filtering
+  // status in memory below avoids that landmine entirely.
   const snapshot = await adminDb
     .collection(TASKS_COLLECTION)
     .where("userId", "==", userId)
     .where("createdAt", ">=", fourteenDaysAgo)
-    .where("status", "in", ["completed", "missed"])
     .get();
 
-  const resolved = snapshot.docs.map((d) => d.data() as Task);
+  const resolved = snapshot.docs
+    .map((d) => d.data() as Task)
+    .filter((t) => t.status === "completed" || t.status === "missed");
 
   if (resolved.length === 0) {
     // No history yet — neutral priors so a new user isn't unfairly flagged.

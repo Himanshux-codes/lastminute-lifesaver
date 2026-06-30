@@ -33,7 +33,7 @@ export function TaskCard({ task, onDelete, draggable, dragHandleProps }: TaskCar
       exit={{ opacity: 0, x: -12 }}
       role="listitem"
       aria-label={`Task: ${task.title}`}
-      className="rounded-2xl border border-white/5 bg-base-800/60 p-4 backdrop-blur-sm"
+      className="card-interactive p-4 sm:p-5"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-2">

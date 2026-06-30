@@ -198,7 +198,7 @@ function DashboardContent() {
         <header className="mb-8 flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-xs uppercase tracking-wider text-ink-faint">Chief of Staff</p>
-            <h1 className="font-display text-xl font-medium text-ink sm:text-2xl">
+            <h1 className="font-display text-xl font-medium tracking-tight text-ink sm:text-2xl">
               Good to see you, {isDemo ? "explorer" : user?.displayName?.split(" ")[0] ?? "there"}
             </h1>
           </div>
@@ -230,36 +230,36 @@ function DashboardContent() {
           <button
             onClick={runRiskScan}
             disabled={scoring || tasks.length === 0}
-            className="flex items-center gap-2 rounded-full bg-signal px-4 py-2 text-sm font-medium text-white shadow-glow transition disabled:opacity-50"
+            className="flex items-center gap-2 rounded-full bg-signal px-4 py-2 text-sm font-medium text-white shadow-glow transition hover:bg-signal-dim hover:shadow-elevated disabled:opacity-50"
           >
             {scoring ? <Loader2 size={14} className="animate-spin" /> : <RefreshCcw size={14} />}
             Run risk scan
           </button>
           <button
             onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-sm text-ink-muted transition hover:text-ink"
+            className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.02] px-4 py-2 text-sm text-ink-muted shadow-card transition hover:border-white/20 hover:text-ink"
           >
             <Plus size={14} /> Add task
           </button>
-          <a href="/deadline-radar" className="rounded-full border border-white/10 px-4 py-2 text-sm text-ink-muted transition hover:text-ink">
+          <a href="/deadline-radar" className="rounded-full border border-white/10 bg-white/[0.02] px-4 py-2 text-sm text-ink-muted shadow-card transition hover:border-white/20 hover:text-ink">
             Deadline radar
           </a>
-          <a href="/goal-planner" className="rounded-full border border-white/10 px-4 py-2 text-sm text-ink-muted transition hover:text-ink">
+          <a href="/goal-planner" className="rounded-full border border-white/10 bg-white/[0.02] px-4 py-2 text-sm text-ink-muted shadow-card transition hover:border-white/20 hover:text-ink">
             Goal planner
           </a>
-          <a href="/voice-assistant" className="rounded-full border border-white/10 px-4 py-2 text-sm text-ink-muted transition hover:text-ink">
+          <a href="/voice-assistant" className="rounded-full border border-white/10 bg-white/[0.02] px-4 py-2 text-sm text-ink-muted shadow-card transition hover:border-white/20 hover:text-ink">
             Voice assistant
           </a>
-          <a href="/analytics" className="rounded-full border border-white/10 px-4 py-2 text-sm text-ink-muted transition hover:text-ink">
+          <a href="/analytics" className="rounded-full border border-white/10 bg-white/[0.02] px-4 py-2 text-sm text-ink-muted shadow-card transition hover:border-white/20 hover:text-ink">
             Analytics
           </a>
-          <a href="/life-risk" className="rounded-full border border-white/10 px-4 py-2 text-sm text-ink-muted transition hover:text-ink">
+          <a href="/life-risk" className="rounded-full border border-white/10 bg-white/[0.02] px-4 py-2 text-sm text-ink-muted shadow-card transition hover:border-white/20 hover:text-ink">
             Life risk score
           </a>
-          <a href="/simulate" className="rounded-full border border-white/10 px-4 py-2 text-sm text-ink-muted transition hover:text-ink">
+          <a href="/simulate" className="rounded-full border border-white/10 bg-white/[0.02] px-4 py-2 text-sm text-ink-muted shadow-card transition hover:border-white/20 hover:text-ink">
             Simulate commitment
           </a>
-          <a href="/focus" className="rounded-full border border-white/10 px-4 py-2 text-sm text-ink-muted transition hover:text-ink">
+          <a href="/focus" className="rounded-full border border-white/10 bg-white/[0.02] px-4 py-2 text-sm text-ink-muted shadow-card transition hover:border-white/20 hover:text-ink">
             Focus mode
           </a>
         </div>

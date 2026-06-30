@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Loader2, ArrowLeft, Play, Square, Timer } from "lucide-react";
+import { ArrowLeft, Play, Square, Timer } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/contexts/ToastContext";
 import { PageLoadingSkeleton } from "@/components/Skeleton";
+import { ErrorRetry } from "@/components/ErrorRetry";
 import { apiFetch } from "@/lib/apiClient";
 import type { Task, FocusSession } from "@/types";
 
@@ -13,14 +15,17 @@ const DURATIONS = [25, 45, 60];
 
 export default function FocusModePage() {
   const { user, loading } = useAuth();
+  const { showToast } = useToast();
   const router = useRouter();
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [fetchingTasks, setFetchingTasks] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string>("");
   const [plannedMinutes, setPlannedMinutes] = useState(25);
   const [session, setSession] = useState<FocusSession | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(0);
+  const [starting, setStarting] = useState(false);
   const [ending, setEnding] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -28,15 +33,24 @@ export default function FocusModePage() {
     if (!loading && !user) router.replace("/");
   }, [loading, user, router]);
 
+  const loadTasks = useCallback(async () => {
+    setFetchingTasks(true);
+    setLoadError(null);
+    try {
+      const data = await apiFetch<{ tasks: Task[] }>("/api/tasks");
+      setTasks(data.tasks);
+      if (data.tasks.length > 0) setSelectedTaskId(data.tasks[0].id);
+    } catch (e) {
+      // Previously unhandled — a failed fetch left this stuck on the loading state forever.
+      setLoadError((e as Error).message);
+    } finally {
+      setFetchingTasks(false);
+    }
+  }, []);
+
   useEffect(() => {
-    if (!user) return;
-    apiFetch<{ tasks: Task[] }>("/api/tasks")
-      .then((data) => {
-        setTasks(data.tasks);
-        if (data.tasks.length > 0) setSelectedTaskId(data.tasks[0].id);
-      })
-      .finally(() => setFetchingTasks(false));
-  }, [user]);
+    if (user) loadTasks();
+  }, [user, loadTasks]);
 
   useEffect(() => {
     return () => {
@@ -46,22 +60,29 @@ export default function FocusModePage() {
 
   async function startSession() {
     if (!selectedTaskId) return;
-    const { session } = await apiFetch<{ session: FocusSession }>("/api/focus/start", {
-      method: "POST",
-      body: JSON.stringify({ taskId: selectedTaskId, plannedMinutes }),
-    });
-    setSession(session);
-    setSecondsLeft(plannedMinutes * 60);
-
-    intervalRef.current = setInterval(() => {
-      setSecondsLeft((prev) => {
-        if (prev <= 1) {
-          if (intervalRef.current) clearInterval(intervalRef.current);
-          return 0;
-        }
-        return prev - 1;
+    setStarting(true);
+    try {
+      const { session } = await apiFetch<{ session: FocusSession }>("/api/focus/start", {
+        method: "POST",
+        body: JSON.stringify({ taskId: selectedTaskId, plannedMinutes }),
       });
-    }, 1000);
+      setSession(session);
+      setSecondsLeft(plannedMinutes * 60);
+
+      intervalRef.current = setInterval(() => {
+        setSecondsLeft((prev) => {
+          if (prev <= 1) {
+            if (intervalRef.current) clearInterval(intervalRef.current);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } catch (e) {
+      showToast(`Couldn't start the session: ${(e as Error).message}`, { variant: "error" });
+    } finally {
+      setStarting(false);
+    }
   }
 
   async function endSession(completed: boolean) {
@@ -75,6 +96,8 @@ export default function FocusModePage() {
       });
       setSession(null);
       setSecondsLeft(0);
+    } catch (e) {
+      showToast(`Couldn't end the session: ${(e as Error).message}`, { variant: "error" });
     } finally {
       setEnding(false);
     }
@@ -90,28 +113,28 @@ export default function FocusModePage() {
   const progress = session ? 1 - secondsLeft / (session.plannedMinutes * 60) : 0;
 
   return (
-    <main className="min-h-screen px-6 py-10">
+    <main className="min-h-screen px-4 py-8 sm:px-6 sm:py-10">
       <div className="mx-auto max-w-md">
-        <a href="/dashboard" className="mb-6 inline-flex items-center gap-1.5 text-xs text-ink-faint hover:text-ink-muted">
+        <a href="/dashboard" className="mb-6 inline-flex items-center gap-1.5 text-xs text-ink-faint transition hover:text-ink-muted">
           <ArrowLeft size={12} /> Back to dashboard
         </a>
 
-        <h1 className="font-display text-2xl font-medium text-ink">Smart Focus Mode</h1>
-        <p className="mt-1 mb-8 text-sm text-ink-muted">One task, one timer, zero distractions.</p>
+        <h1 className="font-display text-2xl font-medium tracking-tight text-ink sm:text-3xl">Smart Focus Mode</h1>
+        <p className="mt-1.5 mb-8 text-sm leading-relaxed text-ink-muted">One task, one timer, zero distractions.</p>
 
         {fetchingTasks ? (
-          <div className="flex justify-center py-16">
-            <Loader2 className="animate-spin text-ink-faint" />
-          </div>
+          <PageLoadingSkeleton />
+        ) : loadError ? (
+          <ErrorRetry message={`Couldn't load your tasks: ${loadError}`} onRetry={loadTasks} />
         ) : !session ? (
           tasks.length === 0 ? (
             <p className="text-sm text-ink-muted">No active tasks. Add one from the dashboard first.</p>
           ) : (
-            <div className="space-y-4 rounded-2xl border border-white/5 bg-base-800/60 p-5">
+            <div className="card space-y-4 p-5 sm:p-6">
               <select
                 value={selectedTaskId}
                 onChange={(e) => setSelectedTaskId(e.target.value)}
-                className="w-full rounded-lg bg-base-700/60 px-3 py-2 text-sm text-ink outline-none"
+                className="w-full rounded-lg border border-white/[0.06] bg-base-700/60 px-3 py-2.5 text-sm text-ink outline-none transition focus:border-signal/40"
               >
                 {tasks.map((t) => (
                   <option key={t.id} value={t.id}>
@@ -125,8 +148,10 @@ export default function FocusModePage() {
                   <button
                     key={d}
                     onClick={() => setPlannedMinutes(d)}
-                    className={`flex-1 rounded-lg py-2 text-sm transition ${
-                      plannedMinutes === d ? "bg-signal text-white" : "bg-base-700/60 text-ink-muted"
+                    className={`flex-1 rounded-lg py-2.5 text-sm font-medium transition ${
+                      plannedMinutes === d
+                        ? "bg-signal text-white shadow-glow-sm"
+                        : "bg-base-700/60 text-ink-muted hover:text-ink"
                     }`}
                   >
                     {d}m
@@ -136,9 +161,10 @@ export default function FocusModePage() {
 
               <button
                 onClick={startSession}
-                className="flex w-full items-center justify-center gap-2 rounded-full bg-signal px-5 py-3 text-sm font-medium text-white shadow-glow"
+                disabled={starting}
+                className="flex w-full items-center justify-center gap-2 rounded-full bg-signal px-5 py-3 text-sm font-medium text-white shadow-glow transition hover:bg-signal-dim hover:shadow-elevated disabled:opacity-60"
               >
-                <Play size={14} /> Start focus session
+                <Play size={14} /> {starting ? "Starting..." : "Start focus session"}
               </button>
             </div>
           )
@@ -146,13 +172,13 @@ export default function FocusModePage() {
           <motion.div
             initial={{ opacity: 0, scale: 0.96 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="flex flex-col items-center rounded-2xl border border-white/5 bg-base-800/60 p-8"
+            className="card flex flex-col items-center p-8 sm:p-10"
           >
             <p className="mb-1 text-xs uppercase tracking-wider text-ink-faint">Focusing on</p>
             <p className="mb-6 text-center font-display text-sm font-medium text-ink">{selectedTask?.title}</p>
 
             <TimerRing progress={progress} />
-            <p className="mt-4 font-display text-4xl font-medium text-ink">
+            <p className="mt-4 font-display text-4xl font-medium tracking-tight text-ink">
               {minutes.toString().padStart(2, "0")}:{seconds.toString().padStart(2, "0")}
             </p>
 
@@ -160,7 +186,7 @@ export default function FocusModePage() {
               <button
                 onClick={() => endSession(true)}
                 disabled={ending}
-                className="mt-6 flex items-center gap-2 rounded-full bg-risk-low px-5 py-2.5 text-sm font-medium text-base-950 disabled:opacity-50"
+                className="mt-6 flex items-center gap-2 rounded-full bg-risk-low px-5 py-2.5 text-sm font-medium text-base-950 shadow-card transition hover:brightness-105 disabled:opacity-50"
               >
                 <Timer size={14} /> Mark session complete
               </button>
@@ -168,7 +194,7 @@ export default function FocusModePage() {
               <button
                 onClick={() => endSession(false)}
                 disabled={ending}
-                className="mt-6 flex items-center gap-2 rounded-full border border-white/10 px-5 py-2.5 text-sm text-ink-muted disabled:opacity-50"
+                className="mt-6 flex items-center gap-2 rounded-full border border-white/10 px-5 py-2.5 text-sm text-ink-muted transition hover:text-ink disabled:opacity-50"
               >
                 <Square size={14} /> End early
               </button>

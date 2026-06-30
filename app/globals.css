@@ -43,6 +43,42 @@ body {
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
+h1,
+h2,
+h3,
+.font-display {
+  letter-spacing: -0.01em;
+}
+
+/* Thin, unobtrusive scrollbar — matches the rest of the dark, premium chrome instead of
+   the browser default, which looks jarring against this color system. */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgb(var(--color-base-700));
+  border-radius: 999px;
+  border: 2px solid rgb(var(--color-base-950));
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--color-ink-faint));
+}
+
+@layer components {
+  /* Shared card primitive so every panel across the app gets the same border, depth, and
+     hover lift without each page hand-rolling its own shadow/border combination. */
+  .card {
+    @apply rounded-2xl border border-white/[0.06] bg-base-800/60 shadow-card backdrop-blur-sm;
+  }
+  .card-interactive {
+    @apply card transition duration-200 hover:border-white/[0.1] hover:shadow-elevated;
+  }
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;
