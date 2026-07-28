@@ -3,11 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { ArrowLeft, Play, Square, Timer } from "lucide-react";
+import { Play, Square, CheckCircle2, Timer } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/contexts/ToastContext";
 import { PageLoadingSkeleton } from "@/components/Skeleton";
 import { ErrorRetry } from "@/components/ErrorRetry";
+import { PageShell } from "@/components/PageShell";
 import { apiFetch } from "@/lib/apiClient";
 import type { Task, FocusSession } from "@/types";
 
@@ -17,11 +18,10 @@ export default function FocusModePage() {
   const { user, loading } = useAuth();
   const { showToast } = useToast();
   const router = useRouter();
-
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [fetchingTasks, setFetchingTasks] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [selectedTaskId, setSelectedTaskId] = useState<string>("");
+  const [fetchingTasks, setFetchingTasks] = useState(true);
+  const [selectedTaskId, setSelectedTaskId] = useState("");
   const [plannedMinutes, setPlannedMinutes] = useState(25);
   const [session, setSession] = useState<FocusSession | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(0);
@@ -29,203 +29,160 @@ export default function FocusModePage() {
   const [ending, setEnding] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  useEffect(() => {
-    if (!loading && !user) router.replace("/");
-  }, [loading, user, router]);
+  useEffect(() => { if (!loading && !user) router.replace("/"); }, [loading, user, router]);
 
   const loadTasks = useCallback(async () => {
-    setFetchingTasks(true);
-    setLoadError(null);
+    setFetchingTasks(true); setLoadError(null);
     try {
-      const data = await apiFetch<{ tasks: Task[] }>("/api/tasks");
-      setTasks(data.tasks);
-      if (data.tasks.length > 0) setSelectedTaskId(data.tasks[0].id);
-    } catch (e) {
-      // Previously unhandled — a failed fetch left this stuck on the loading state forever.
-      setLoadError((e as Error).message);
-    } finally {
-      setFetchingTasks(false);
-    }
+      const d = await apiFetch<{ tasks: Task[] }>("/api/tasks");
+      setTasks(d.tasks);
+      if (d.tasks.length > 0) setSelectedTaskId(d.tasks[0].id);
+    } catch (e) { setLoadError((e as Error).message); }
+    finally { setFetchingTasks(false); }
   }, []);
 
-  useEffect(() => {
-    if (user) loadTasks();
-  }, [user, loadTasks]);
-
-  useEffect(() => {
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, []);
+  useEffect(() => { if (user) loadTasks(); }, [user, loadTasks]);
+  useEffect(() => () => { if (intervalRef.current) clearInterval(intervalRef.current); }, []);
 
   async function startSession() {
-    if (!selectedTaskId) return;
     setStarting(true);
     try {
       const { session } = await apiFetch<{ session: FocusSession }>("/api/focus/start", {
-        method: "POST",
-        body: JSON.stringify({ taskId: selectedTaskId, plannedMinutes }),
+        method: "POST", body: JSON.stringify({ taskId: selectedTaskId, plannedMinutes }),
       });
       setSession(session);
       setSecondsLeft(plannedMinutes * 60);
-
       intervalRef.current = setInterval(() => {
-        setSecondsLeft((prev) => {
-          if (prev <= 1) {
-            if (intervalRef.current) clearInterval(intervalRef.current);
-            return 0;
-          }
-          return prev - 1;
-        });
+        setSecondsLeft((p) => { if (p <= 1) { clearInterval(intervalRef.current!); return 0; } return p - 1; });
       }, 1000);
-    } catch (e) {
-      showToast(`Couldn't start the session: ${(e as Error).message}`, { variant: "error" });
-    } finally {
-      setStarting(false);
-    }
+    } catch (e) { showToast(`Couldn't start: ${(e as Error).message}`, { variant: "error" }); }
+    finally { setStarting(false); }
   }
 
   async function endSession(completed: boolean) {
     if (!session) return;
     setEnding(true);
-    if (intervalRef.current) clearInterval(intervalRef.current);
+    clearInterval(intervalRef.current!);
     try {
       await apiFetch("/api/focus/end", {
-        method: "POST",
-        body: JSON.stringify({ sessionId: session.id, completed }),
+        method: "POST", body: JSON.stringify({ sessionId: session.id, completed }),
       });
-      setSession(null);
-      setSecondsLeft(0);
-    } catch (e) {
-      showToast(`Couldn't end the session: ${(e as Error).message}`, { variant: "error" });
-    } finally {
-      setEnding(false);
-    }
+      setSession(null); setSecondsLeft(0);
+    } catch (e) { showToast(`Couldn't end session: ${(e as Error).message}`, { variant: "error" }); }
+    finally { setEnding(false); }
   }
 
-  if (loading || !user) {
-    return <PageLoadingSkeleton />;
-  }
+  if (loading || !user) return <PageLoadingSkeleton />;
 
   const selectedTask = tasks.find((t) => t.id === selectedTaskId);
-  const minutes = Math.floor(secondsLeft / 60);
-  const seconds = secondsLeft % 60;
+  const mins = Math.floor(secondsLeft / 60);
+  const secs = secondsLeft % 60;
   const progress = session ? 1 - secondsLeft / (session.plannedMinutes * 60) : 0;
+  const done = secondsLeft === 0 && session;
 
   return (
-    <main className="min-h-screen px-4 py-8 sm:px-6 sm:py-10">
-      <div className="mx-auto max-w-md">
-        <a href="/dashboard" className="mb-6 inline-flex items-center gap-1.5 text-xs text-ink-faint transition hover:text-ink-muted">
-          <ArrowLeft size={12} /> Back to dashboard
-        </a>
-
-        <h1 className="font-display text-2xl font-medium tracking-tight text-ink sm:text-3xl">Smart Focus Mode</h1>
-        <p className="mt-1.5 mb-8 text-sm leading-relaxed text-ink-muted">One task, one timer, zero distractions.</p>
-
-        {fetchingTasks ? (
-          <PageLoadingSkeleton />
-        ) : loadError ? (
-          <ErrorRetry message={`Couldn't load your tasks: ${loadError}`} onRetry={loadTasks} />
-        ) : !session ? (
-          tasks.length === 0 ? (
-            <p className="text-sm text-ink-muted">No active tasks. Add one from the dashboard first.</p>
-          ) : (
-            <div className="card space-y-4 p-5 sm:p-6">
+    <PageShell
+      title="Smart Focus Mode"
+      subtitle="One task, one timer, zero distractions."
+      badge={<span className="label-caps flex items-center gap-1.5 text-signal-glow"><Timer size={11} /> Pomodoro-style</span>}
+    >
+      {fetchingTasks ? (
+        <div className="flex justify-center py-10">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-signal/30 border-t-signal" />
+        </div>
+      ) : loadError ? (
+        <ErrorRetry message={`Couldn't load tasks: ${loadError}`} onRetry={loadTasks} />
+      ) : !session ? (
+        tasks.length === 0 ? (
+          <p className="text-sm text-ink-muted">No active tasks. Add one from the dashboard first.</p>
+        ) : (
+          <div className="card space-y-5 p-6">
+            <div>
+              <label className="label-caps mb-2 block">Select task</label>
               <select
                 value={selectedTaskId}
                 onChange={(e) => setSelectedTaskId(e.target.value)}
-                className="w-full rounded-lg border border-white/[0.06] bg-base-700/60 px-3 py-2.5 text-sm text-ink outline-none transition focus:border-signal/40"
+                className="input-base"
               >
-                {tasks.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.title}
-                  </option>
-                ))}
+                {tasks.map((t) => <option key={t.id} value={t.id}>{t.title}</option>)}
               </select>
-
+            </div>
+            <div>
+              <label className="label-caps mb-2 block">Duration</label>
               <div className="flex gap-2">
                 {DURATIONS.map((d) => (
                   <button
                     key={d}
                     onClick={() => setPlannedMinutes(d)}
-                    className={`flex-1 rounded-lg py-2.5 text-sm font-medium transition ${
+                    className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition ${
                       plannedMinutes === d
-                        ? "bg-signal text-white shadow-glow-sm"
-                        : "bg-base-700/60 text-ink-muted hover:text-ink"
+                        ? "bg-signal text-white shadow-glow"
+                        : "border border-white/[0.08] bg-white/[0.03] text-ink-muted hover:text-ink"
                     }`}
                   >
                     {d}m
                   </button>
                 ))}
               </div>
-
-              <button
-                onClick={startSession}
-                disabled={starting}
-                className="flex w-full items-center justify-center gap-2 rounded-full bg-signal px-5 py-3 text-sm font-medium text-white shadow-glow transition hover:bg-signal-dim hover:shadow-elevated disabled:opacity-60"
-              >
-                <Play size={14} /> {starting ? "Starting..." : "Start focus session"}
-              </button>
             </div>
-          )
-        ) : (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="card flex flex-col items-center p-8 sm:p-10"
-          >
-            <p className="mb-1 text-xs uppercase tracking-wider text-ink-faint">Focusing on</p>
-            <p className="mb-6 text-center font-display text-sm font-medium text-ink">{selectedTask?.title}</p>
-
-            <TimerRing progress={progress} />
-            <p className="mt-4 font-display text-4xl font-medium tracking-tight text-ink">
-              {minutes.toString().padStart(2, "0")}:{seconds.toString().padStart(2, "0")}
-            </p>
-
-            {secondsLeft === 0 ? (
-              <button
-                onClick={() => endSession(true)}
-                disabled={ending}
-                className="mt-6 flex items-center gap-2 rounded-full bg-risk-low px-5 py-2.5 text-sm font-medium text-base-950 shadow-card transition hover:brightness-105 disabled:opacity-50"
-              >
-                <Timer size={14} /> Mark session complete
-              </button>
-            ) : (
-              <button
-                onClick={() => endSession(false)}
-                disabled={ending}
-                className="mt-6 flex items-center gap-2 rounded-full border border-white/10 px-5 py-2.5 text-sm text-ink-muted transition hover:text-ink disabled:opacity-50"
-              >
-                <Square size={14} /> End early
-              </button>
-            )}
-          </motion.div>
-        )}
-      </div>
-    </main>
+            <button onClick={startSession} disabled={starting} className="btn-primary w-full justify-center py-3">
+              <Play size={15} /> {starting ? "Starting…" : "Start focus session"}
+            </button>
+          </div>
+        )
+      ) : (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="card flex flex-col items-center p-8 sm:p-10"
+        >
+          <p className="label-caps mb-1.5">Focusing on</p>
+          <p className="mb-7 max-w-xs text-center font-display text-base font-semibold text-ink">
+            {selectedTask?.title}
+          </p>
+          <TimerRing progress={progress} done={!!done} />
+          <p className="mt-5 font-display text-5xl font-bold tracking-tighter text-ink tabular-nums">
+            {String(mins).padStart(2, "0")}:{String(secs).padStart(2, "0")}
+          </p>
+          {done ? (
+            <button
+              onClick={() => endSession(true)}
+              disabled={ending}
+              className="mt-6 btn-primary"
+              style={{ background: "linear-gradient(145deg,#34D399,#059669)" }}
+            >
+              <CheckCircle2 size={15} /> Mark complete
+            </button>
+          ) : (
+            <button onClick={() => endSession(false)} disabled={ending} className="mt-6 btn-secondary">
+              <Square size={14} /> End early
+            </button>
+          )}
+        </motion.div>
+      )}
+    </PageShell>
   );
 }
 
-function TimerRing({ progress }: { progress: number }) {
-  const radius = 80;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference - Math.min(1, Math.max(0, progress)) * circumference;
-
+function TimerRing({ progress, done }: { progress: number; done: boolean }) {
+  const R = 88, C = 2 * Math.PI * R;
+  const color = done ? "#34D399" : "#6E63FF";
   return (
-    <svg width={190} height={190} viewBox="0 0 190 190">
-      <circle cx={95} cy={95} r={radius} fill="none" stroke="#1A2238" strokeWidth={10} />
+    <svg width={210} height={210} viewBox="0 0 210 210">
+      <circle cx={105} cy={105} r={R} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth={10} />
       <circle
-        cx={95}
-        cy={95}
-        r={radius}
+        cx={105} cy={105} r={R}
         fill="none"
-        stroke="#6E63FF"
+        stroke={color}
         strokeWidth={10}
-        strokeDasharray={circumference}
-        strokeDashoffset={offset}
         strokeLinecap="round"
-        transform="rotate(-90 95 95)"
-        style={{ transition: "stroke-dashoffset 1s linear" }}
+        strokeDasharray={C}
+        strokeDashoffset={C - progress * C}
+        transform="rotate(-90 105 105)"
+        style={{
+          transition: "stroke-dashoffset 1s linear",
+          filter: `drop-shadow(0 0 10px ${color}60)`,
+        }}
       />
     </svg>
   );

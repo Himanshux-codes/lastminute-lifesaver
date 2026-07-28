@@ -2,14 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Flame, Loader2 } from "lucide-react";
+import { Sparkles, Loader2, ArrowRight } from "lucide-react";
 import { apiFetch } from "@/lib/apiClient";
 import type { AccountabilityNudge } from "@/types";
 
-const TONE_STYLES: Record<AccountabilityNudge["tone"], string> = {
-  encouraging: "border-signal/30 bg-signal/5",
-  firm: "border-risk-high/30 bg-risk-high/5",
-  celebratory: "border-risk-low/30 bg-risk-low/5",
+const TONE_STYLE: Record<AccountabilityNudge["tone"], { accent: string; bg: string; border: string }> = {
+  encouraging: { accent: "#9B93FF", bg: "rgba(110,99,255,0.07)", border: "rgba(110,99,255,0.2)" },
+  firm:        { accent: "#F87171", bg: "rgba(248,113,113,0.07)", border: "rgba(248,113,113,0.2)" },
+  celebratory: { accent: "#34D399", bg: "rgba(52,211,153,0.07)",  border: "rgba(52,211,153,0.2)" },
 };
 
 export function AccountabilityBanner() {
@@ -18,32 +18,57 @@ export function AccountabilityBanner() {
 
   useEffect(() => {
     apiFetch<{ nudge: AccountabilityNudge }>("/api/gemini/accountability", { method: "POST" })
-      .then((data) => setNudge(data.nudge))
+      .then((d) => setNudge(d.nudge))
       .catch(() => setNudge(null))
       .finally(() => setLoading(false));
   }, []);
 
   if (loading) {
     return (
-      <div className="mb-6 flex items-center gap-2 rounded-2xl border border-white/5 bg-base-800/40 p-4 text-xs text-ink-faint">
-        <Loader2 size={12} className="animate-spin" /> Reading your patterns...
+      <div className="card flex h-full min-h-[120px] flex-col items-center justify-center gap-2 p-6">
+        <Loader2 size={16} className="animate-spin text-signal-glow" />
+        <p className="text-xs text-ink-faint">Reading your patterns…</p>
       </div>
     );
   }
 
-  if (!nudge) return null;
+  if (!nudge) {
+    return (
+      <div className="card flex h-full min-h-[120px] flex-col justify-center p-6">
+        <p className="text-xs text-ink-faint">
+          Add tasks and run a risk scan to get your first AI recommendation.
+        </p>
+      </div>
+    );
+  }
+
+  const style = TONE_STYLE[nudge.tone];
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: -6 }}
+      initial={{ opacity: 0, y: -4 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`mb-6 flex items-start gap-3 rounded-2xl border p-4 ${TONE_STYLES[nudge.tone]}`}
+      transition={{ duration: 0.35 }}
+      className="flex h-full flex-col justify-between rounded-[18px] p-5 sm:p-6"
+      style={{
+        background: style.bg,
+        border: `1px solid ${style.border}`,
+        boxShadow: "0 1px 1px rgba(0,0,0,0.2), 0 4px 16px -4px rgba(0,0,0,0.35)",
+      }}
     >
-      <Flame size={16} className="mt-0.5 text-signal-glow" />
       <div>
-        <p className="text-sm text-ink">{nudge.message}</p>
-        <p className="mt-1 text-xs text-ink-muted">Next: {nudge.focusSuggestion}</p>
+        <p
+          className="label-caps mb-3 flex items-center gap-1.5"
+          style={{ color: style.accent }}
+        >
+          <Sparkles size={11} /> AI recommendation
+        </p>
+        <p className="text-sm leading-relaxed text-ink">{nudge.message}</p>
       </div>
+      <p className="mt-4 flex items-center gap-1.5 text-xs text-ink-muted">
+        <ArrowRight size={11} style={{ color: style.accent }} />
+        {nudge.focusSuggestion}
+      </p>
     </motion.div>
   );
 }

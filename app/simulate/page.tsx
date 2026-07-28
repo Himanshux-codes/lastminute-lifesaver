@@ -3,31 +3,29 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Loader2, ArrowLeft, FlaskConical, CheckCircle2, XCircle } from "lucide-react";
+import { Loader2, FlaskConical, CheckCircle2, XCircle, TrendingUp, TrendingDown } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/contexts/ToastContext";
 import { PageLoadingSkeleton } from "@/components/Skeleton";
+import { PageShell } from "@/components/PageShell";
 import { apiFetch } from "@/lib/apiClient";
 import type { SimulationResult } from "@/types";
 
 export default function SimulatePage() {
   const { user, loading } = useAuth();
+  const { showToast } = useToast();
   const router = useRouter();
-
   const [title, setTitle] = useState("");
   const [minutes, setMinutes] = useState(120);
   const [deadline, setDeadline] = useState("");
   const [result, setResult] = useState<SimulationResult | null>(null);
   const [running, setRunning] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!loading && !user) router.replace("/");
-  }, [loading, user, router]);
+  useEffect(() => { if (!loading && !user) router.replace("/"); }, [loading, user, router]);
 
-  async function runSimulation() {
+  async function run() {
     if (!title || !deadline) return;
     setRunning(true);
-    setError(null);
     try {
       const { result } = await apiFetch<{ result: SimulationResult }>("/api/gemini/simulate", {
         method: "POST",
@@ -39,122 +37,136 @@ export default function SimulatePage() {
       });
       setResult(result);
     } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setRunning(false);
-    }
+      showToast(`Simulation failed: ${(e as Error).message}`, { variant: "error" });
+    } finally { setRunning(false); }
   }
 
-  if (loading || !user) {
-    return <PageLoadingSkeleton />;
-  }
+  if (loading || !user) return <PageLoadingSkeleton />;
+
+  const delta = result?.projectedLifeRiskDelta ?? 0;
 
   return (
-    <main className="min-h-screen px-6 py-10">
-      <div className="mx-auto max-w-2xl">
-        <a href="/dashboard" className="mb-6 inline-flex items-center gap-1.5 text-xs text-ink-faint hover:text-ink-muted">
-          <ArrowLeft size={12} /> Back to dashboard
-        </a>
-
-        <h1 className="font-display text-2xl font-medium text-ink">Future Simulation Engine</h1>
-        <p className="mt-1 mb-8 text-sm text-ink-muted">
-          See how a new commitment would ripple through your existing workload before you say yes.
-        </p>
-
-        <div className="space-y-3 rounded-2xl border border-white/5 bg-base-800/60 p-5">
+    <PageShell
+      title="Future Simulation Engine"
+      subtitle="See how a new commitment ripples through your existing workload — before you say yes."
+      badge={<span className="label-caps flex items-center gap-1.5 text-signal-glow"><FlaskConical size={11} /> What-if engine</span>}
+    >
+      <div className="card mb-6 space-y-4 p-5 sm:p-6">
+        <div className="relative">
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="e.g. Volunteer to lead the hackathon demo"
-            className="w-full rounded-lg bg-base-700/60 px-3 py-2 text-sm text-ink outline-none placeholder:text-ink-faint"
+            className="input-base pb-2 pt-5 peer"
           />
-          <div className="grid grid-cols-2 gap-3">
+          <label className="pointer-events-none absolute left-4 top-1.5 text-[9px] font-semibold uppercase tracking-[0.08em] text-ink-faint transition-all
+                            peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-sm peer-placeholder-shown:normal-case peer-placeholder-shown:tracking-normal
+                            peer-focus:top-1.5 peer-focus:text-[9px] peer-focus:uppercase peer-focus:tracking-[0.08em] peer-focus:text-signal-glow">
+            New commitment
+          </label>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="relative">
             <input
               type="number"
               value={minutes}
               onChange={(e) => setMinutes(Number(e.target.value))}
-              placeholder="Estimated minutes"
-              className="w-full rounded-lg bg-base-700/60 px-3 py-2 text-sm text-ink outline-none"
+              className="input-base pb-2 pt-5 peer"
             />
+            <label className="pointer-events-none absolute left-4 top-1.5 text-[9px] font-semibold uppercase tracking-[0.08em] text-ink-faint transition-all
+                              peer-focus:text-signal-glow">
+              Est. minutes
+            </label>
+          </div>
+          <div className="relative">
             <input
               type="datetime-local"
               value={deadline}
               onChange={(e) => setDeadline(e.target.value)}
-              className="w-full rounded-lg bg-base-700/60 px-3 py-2 text-sm text-ink outline-none"
+              className="input-base pb-2 pt-5 peer"
             />
+            <label className="pointer-events-none absolute left-4 top-1.5 text-[9px] font-semibold uppercase tracking-[0.08em] text-ink-faint transition-all
+                              peer-focus:text-signal-glow">
+              Deadline
+            </label>
           </div>
-          <button
-            onClick={runSimulation}
-            disabled={running || !title || !deadline}
-            className="flex items-center gap-2 rounded-full bg-signal px-5 py-2.5 text-sm font-medium text-white shadow-glow disabled:opacity-50"
-          >
-            {running ? <Loader2 size={14} className="animate-spin" /> : <FlaskConical size={14} />}
-            Run simulation
-          </button>
         </div>
+        <button
+          onClick={run}
+          disabled={running || !title || !deadline}
+          className="btn-primary w-full justify-center py-2.5"
+        >
+          {running ? <Loader2 size={15} className="animate-spin" /> : <FlaskConical size={15} />}
+          {running ? "Simulating…" : "Run simulation"}
+        </button>
+      </div>
 
-        {error && <p className="mt-4 text-sm text-risk-high">{error}</p>}
-
-        {result && (
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-6 space-y-4">
-            <div
-              className={`flex items-start gap-3 rounded-2xl border p-4 ${
-                result.feasibleToAdd ? "border-risk-low/30 bg-risk-low/5" : "border-risk-critical/30 bg-risk-critical/5"
-              }`}
-            >
-              {result.feasibleToAdd ? (
-                <CheckCircle2 size={18} className="mt-0.5 text-risk-low" />
-              ) : (
-                <XCircle size={18} className="mt-0.5 text-risk-critical" />
+      {result && (
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="space-y-4">
+          {/* Verdict */}
+          <div
+            className="flex items-start gap-4 rounded-[18px] p-5"
+            style={{
+              background: result.feasibleToAdd ? "rgba(52,211,153,0.07)" : "rgba(255,59,92,0.08)",
+              border: `1px solid ${result.feasibleToAdd ? "rgba(52,211,153,0.2)" : "rgba(255,59,92,0.25)"}`,
+            }}
+          >
+            {result.feasibleToAdd
+              ? <CheckCircle2 size={20} className="mt-0.5 shrink-0 text-risk-low" />
+              : <XCircle size={20} className="mt-0.5 shrink-0 text-risk-critical" />
+            }
+            <div>
+              <p className={`font-semibold ${result.feasibleToAdd ? "text-risk-low" : "text-risk-critical"}`}>
+                {result.feasibleToAdd ? "You can take this on." : "This would put you at risk."}
+              </p>
+              <p className="mt-1 text-sm leading-relaxed text-ink-muted">{result.verdict}</p>
+              {result.alternativeSuggestion && (
+                <p className="mt-2 text-xs text-ink-faint">Instead: {result.alternativeSuggestion}</p>
               )}
-              <div>
-                <p className="text-sm font-medium text-ink">
-                  {result.feasibleToAdd ? "You can take this on." : "This would put you at risk."}
-                </p>
-                <p className="mt-1 text-xs leading-relaxed text-ink-muted">{result.verdict}</p>
-                {result.alternativeSuggestion && (
-                  <p className="mt-2 text-xs leading-relaxed text-ink-faint">
-                    Instead: {result.alternativeSuggestion}
-                  </p>
-                )}
-              </div>
             </div>
+          </div>
 
-            <div className="rounded-2xl border border-white/5 bg-base-800/40 p-4">
-              <p className="text-xs text-ink-faint">Projected change to your Life Risk Score</p>
-              <p
-                className={`mt-1 font-display text-2xl font-medium ${
-                  result.projectedLifeRiskDelta > 0 ? "text-risk-high" : "text-risk-low"
+          {/* Delta */}
+          <div className="card flex items-center justify-between p-5">
+            <div>
+              <p className="label-caps mb-1">Life Risk Score change</p>
+              <p className="text-xs text-ink-muted">Projected impact on your overall schedule</p>
+            </div>
+            <div className="flex items-center gap-2">
+              {delta > 0
+                ? <TrendingUp size={18} className="text-risk-critical" />
+                : <TrendingDown size={18} className="text-risk-low" />
+              }
+              <span
+                className={`font-display text-2xl font-bold leading-none tabular-nums ${
+                  delta > 0 ? "text-risk-critical" : "text-risk-low"
                 }`}
               >
-                {result.projectedLifeRiskDelta > 0 ? "+" : ""}
-                {result.projectedLifeRiskDelta}
-              </p>
+                {delta > 0 ? "+" : ""}{delta}
+              </span>
             </div>
+          </div>
 
-            {result.affectedTasks.length > 0 && (
-              <div>
-                <p className="mb-3 text-xs font-medium uppercase tracking-wider text-ink-faint">
-                  Tasks that would be affected
-                </p>
-                <div className="space-y-2">
-                  {result.affectedTasks.map((t) => (
-                    <div
-                      key={t.taskId}
-                      className="flex items-center justify-between rounded-xl border border-white/5 bg-base-800/40 p-3 text-xs"
-                    >
-                      <span className="text-ink-muted">{t.taskTitle}</span>
-                      <span className="text-ink-faint">
-                        {t.riskBefore} → <span className="text-risk-high">{t.riskAfter}</span>
-                      </span>
+          {/* Affected tasks */}
+          {result.affectedTasks.length > 0 && (
+            <div>
+              <p className="section-title">Tasks that would be affected</p>
+              <div className="space-y-2">
+                {result.affectedTasks.map((t) => (
+                  <div key={t.taskId} className="card flex items-center justify-between gap-3 p-3.5">
+                    <p className="min-w-0 flex-1 truncate text-sm text-ink-muted">{t.taskTitle}</p>
+                    <div className="flex items-center gap-1.5 shrink-0 font-mono text-xs">
+                      <span className="text-ink-faint">{t.riskBefore}</span>
+                      <span className="text-ink-faint">→</span>
+                      <span className="font-semibold text-risk-high">{t.riskAfter}</span>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
-            )}
-          </motion.div>
-        )}
-      </div>
-    </main>
+            </div>
+          )}
+        </motion.div>
+      )}
+    </PageShell>
   );
 }
